@@ -1,33 +1,26 @@
 import { useState, useEffect } from "react";
-import { ethers } from 'ethers'
+import Web3 from "web3";
 
-import TokenArtifact from "./artifacts/contracts/Turing.sol/Turing.json"
-
-
-const CONTRACT_ADDRESS = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512";
-const localBlockchainAddress = 'http://localhost:8545'
+const CONTRACT_ADDRESS = "SEU_CONTRATO_AQUI";
+const CONTRACT_ABI = [ /* ABI do contrato */ ];
 
 export default function App() {
   const [account, setAccount] = useState(null);
   const [contract, setContract] = useState(null);
   const [rankings, setRankings] = useState([]);
-  const [authorizedUsers, setAuthorizedUsers] = useState([]);
-
 
   useEffect(() => {
     async function loadBlockchainData() {
       if (window.ethereum) {
-        const provider = new ethers.providers.JsonRpcProvider(localBlockchainAddress);
+        const web3 = new Web3(window.ethereum);
         try {
-          const signer = await provider.getSigner();
-          setAccount(await signer.getAddress());
+          const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+          setAccount(accounts[0]);
 
-          const contractInstance = new ethers.Contract(CONTRACT_ADDRESS, TokenArtifact.abi, signer);
+          const contractInstance = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
           setContract(contractInstance);
 
           fetchRankings(contractInstance);
-          fetchAuthorizedUsers(contractInstance);
-
         } catch (error) {
           console.error("Erro ao conectar à MetaMask", error);
         }
@@ -40,7 +33,7 @@ export default function App() {
 
   async function fetchRankings(contractInstance) {
     try {
-      const rankings = await contractInstance.getRankings();
+      const rankings = await contractInstance.methods.getRankings().call();
       setRankings(rankings);
     } catch (error) {
       console.error("Erro ao buscar rankings", error);
@@ -50,34 +43,23 @@ export default function App() {
   async function callFunction(funcName, ...args) {
     if (!contract) return;
     try {
-      const tx = await contract[funcName](...args);
-      await tx.wait();
-      console.log("Transação confirmada:", tx);
+      const result = await contract.methods[funcName](...args).send({ from: account });
+      console.log("Resultado:", result);
       fetchRankings(contract);
     } catch (error) {
       console.error("Erro ao chamar função", error);
     }
   }
 
-  async function fetchAuthorizedUsers(contractInstance) {
-    try {
-      const users = await contractInstance.getAuthorizedUsers();
-      setAuthorizedUsers(users);
-    } catch (error) {
-      console.error("Erro ao buscar usuários autorizados", error);
-    }
-  }
-
-
   return (
     <div className="p-5">
       <h1 className="text-xl font-bold">DApp com MetaMask</h1>
       <p>Conta conectada: {account}</p>
       <button
-        onClick={() => callFunction("issueToken")}
+        onClick={() => callFunction("someFunction")}
         className="bg-blue-500 text-white px-4 py-2 rounded"
       >
-        issueToken
+        Chamar Função
       </button>
       <h2 className="mt-5 text-lg font-bold">Ranking</h2>
       <ul>
@@ -85,13 +67,6 @@ export default function App() {
           <li key={index}>{rank}</li>
         ))}
       </ul>
-      <h2 className="mt-5 text-lg font-bold">Usuários Autorizados</h2>
-      <ul>
-        {authorizedUsers.map((user, index) => (
-          <li key={index}>{user}</li>
-        ))}
-      </ul>
-
     </div>
   );
 }
