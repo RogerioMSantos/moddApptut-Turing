@@ -90,7 +90,8 @@ contract Turing is ERC20, Ownable {
     function issueToken(
         string memory codename,
         uint256 amount
-    ) external onlyAuthorized {
+    ) external onlyAuthorized
+     {
         address recipient = nameToAddress[codename];
         require(recipient != address(0), "Invalid codename");
         _mint(recipient, amount);
@@ -126,8 +127,7 @@ contract Turing is ERC20, Ownable {
     function getRanking() external view returns (string[] memory names, uint256[] memory amount) {
         uint256[] memory amounts = new uint256[](userCodenames.length);
         for (uint256 i = 0; i < userCodenames.length; i++) {
-            //amounts[i] = balanceOf(nameToAddress[userCodenames[i]]);
-            amounts[i] = 0;
+            amounts[i] = balanceOf(nameToAddress[userCodenames[i]]);
         }
         
         return (userCodenames,amounts);
