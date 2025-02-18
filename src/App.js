@@ -5,28 +5,37 @@ import TokenArtifact from "./artifacts/contracts/Turing.sol/Turing.json"
 
 
 const CONTRACT_ADDRESS = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512";
-const localBlockchainAddress = 'http://localhost:8545'
 
 export default function App() {
   const [account, setAccount] = useState(null);
   const [contract, setContract] = useState(null);
   const [rankings, setRankings] = useState([]);
-  const [authorizedUsers, setAuthorizedUsers] = useState([]);
 
 
   useEffect(() => {
     async function loadBlockchainData() {
       if (window.ethereum) {
-        const provider = new ethers.providers.JsonRpcProvider(localBlockchainAddress);
+        const provider = new ethers.providers.Web3Provider(window.ethereum);
+        const network = await provider.getNetwork();
+        console.log("Rede conectada:", network);
+        await provider.send("eth_requestAccounts", []);
+
         try {
           const signer = await provider.getSigner();
           setAccount(await signer.getAddress());
+          console.log("Conta conectada:", await signer.getAddress());
+
+          console.log("abi:", TokenArtifact.abi);
 
           const contractInstance = new ethers.Contract(CONTRACT_ADDRESS, TokenArtifact.abi, signer);
           setContract(contractInstance);
 
           fetchRankings(contractInstance);
-          fetchAuthorizedUsers(contractInstance);
+          console.log("Contrato carregado:", contractInstance);
+
+          const balance = await provider.getBalance("ethers.eth")
+          console.log("Saldo:", ethers.utils.formatEther(balance));
+          //console.log("Saldo:", await contractInstance.balanceOf(signer.getAddress()));
 
         } catch (error) {
           console.error("Erro ao conectar à MetaMask", error);
@@ -40,8 +49,10 @@ export default function App() {
 
   async function fetchRankings(contractInstance) {
     try {
-      const rankings = await contractInstance.getRankings();
-      setRankings(rankings);
+      const [names, amounts] = await contractInstance.getRanking(); // Certifique-se de desestruturar os valores
+      console.log("Nomes:", names);
+      console.log("Quantidades:", amounts);
+      setRankings({ names, amounts });
     } catch (error) {
       console.error("Erro ao buscar rankings", error);
     }
@@ -59,14 +70,6 @@ export default function App() {
     }
   }
 
-  async function fetchAuthorizedUsers(contractInstance) {
-    try {
-      const users = await contractInstance.getAuthorizedUsers();
-      setAuthorizedUsers(users);
-    } catch (error) {
-      console.error("Erro ao buscar usuários autorizados", error);
-    }
-  }
 
 
   return (
@@ -85,13 +88,6 @@ export default function App() {
           <li key={index}>{rank}</li>
         ))}
       </ul>
-      <h2 className="mt-5 text-lg font-bold">Usuários Autorizados</h2>
-      <ul>
-        {authorizedUsers.map((user, index) => (
-          <li key={index}>{user}</li>
-        ))}
-      </ul>
-
     </div>
   );
 }
