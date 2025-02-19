@@ -51,8 +51,7 @@ export default function App() {
       setRankings(prevRankings => {
         return prevRankings.map(user => {
           if (user.name === username) {
-            // Atualiza o amount do usuário encontrado
-            return { ...user, amount: ethers.utils.parseEther(newAmount) };
+            return { ...user, amount: ethers.utils.formatEther(newAmount) };
           }
           return user;
         });
@@ -63,7 +62,7 @@ export default function App() {
 
   async function fetchRankings(contractInstance) {
     try {
-      const [names, amounts] = await contractInstance.getRanking(); // Supondo que getRanking() retorna dois arrays
+      const [names, amounts] = await contractInstance.getRanking();
       
       const rankings = names.map((name, index) => ({
         name: name,
@@ -90,11 +89,11 @@ export default function App() {
   }
 
   const handleNameChange = (e) => {
-    setSelectedName(e.target.value);  // Atualiza o nome selecionado
+    setSelectedName(e.target.value);
   }
 
   const handleAmountChange = (e) => {
-    setAmount(e.target.value);  // Atualiza o valor do estado com o texto digitado
+    setAmount(e.target.value);
   }
 
 
@@ -103,10 +102,10 @@ export default function App() {
       <h1 className="text-xl font-bold">DApp com MetaMask</h1>
       <p>Conta conectada: {account}</p>
 
-      <label className="mt-5 block text-lg font-bold">Selecione um jogador:</label>
+      <label className="mt-5 block text-lg font-bold">Selecione uma :</label>
       <select 
-        onChange={handleNameChange}  // Atualiza o nome selecionado
-        value={selectedName}  // Exibe o nome selecionado
+        onChange={handleNameChange}
+        value={selectedName}
         className="bg-blue-500 text-white px-4 py-2 rounded"
       >
          <option value="">Selecione...</option>
@@ -120,7 +119,7 @@ export default function App() {
       <input
         type="text"
         value={amount}
-        onChange={handleAmountChange}  // Atualiza o estado com o valor digitado
+        onChange={handleAmountChange}
         className="bg-white border-2 border-gray-300 rounded px-4 py-2 mt-2"
         placeholder="Digite o valor..."
       />
@@ -140,7 +139,7 @@ export default function App() {
         Votar
       </button>
       <button
-        onClick={() => callFunction("issueToken")}
+        onClick={() => callFunction("vote", selectedName, amount)}
         className="bg-blue-500 text-white px-4 py-2 rounded"
       >
         Ativar Votação
@@ -154,7 +153,7 @@ export default function App() {
       <h2 className="mt-5 text-lg font-bold">Ranking</h2>
       <ul>
         {rankings.map(({ name, amount }, index) => (
-          <li key={index}>{name}: {ethers.utils.formatEther(amount)} ETH</li>
+          <li key={index}>{name}: {amount} ETH</li>
         ))}
       </ul>
     </div>
