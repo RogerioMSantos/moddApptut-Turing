@@ -4,7 +4,7 @@ import { ethers } from 'ethers'
 import TokenArtifact from "./artifacts/contracts/Turing.sol/Turing.json"
 
 
-const CONTRACT_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
+const CONTRACT_ADDRESS = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512";
 
 //const localBlockchainAddress = 'http://localhost:8545'
 
@@ -46,28 +46,35 @@ export default function App() {
     loadBlockchainData();
   }, []);
 
-  async function createEvent(contractInstance){
-    contractInstance.on( "Deposit", async(username, newAmount) =>{
+  async function createEvent(contractInstance) {
+    contractInstance.on("Deposit", async (username, newAmount) => {
+      const [names, amounts] = await contractInstance.getRanking();
+      const newRankings = names.map((name, index) => ({
+        name: name,
+        amount: amounts[index].toString()
+      }));
+  
+      // Verifica se os rankings mudaram antes de atualizar o estado
       setRankings(prevRankings => {
-        return prevRankings.map(user => {
-          if (user.name === username) {
-            return { ...user, amount: ethers.utils.formatEther(newAmount) };
-          }
-          return user;
-        });
+        if (JSON.stringify(prevRankings) !== JSON.stringify(newRankings)) {
+          return newRankings;
+        }
+        return prevRankings;
       });
-    }
-    )
+    });
   }
+
 
   async function fetchRankings(contractInstance) {
     try {
       const [names, amounts] = await contractInstance.getRanking();
-      
+
       const rankings = names.map((name, index) => ({
         name: name,
-        amount: amounts[index]
+        amount: amounts[index].toString()
       }));
+
+      rankings.sort((a, b) => b.amount - a.amount);
 
       console.log("Rankings:", rankings);
       setRankings(rankings);
@@ -76,13 +83,14 @@ export default function App() {
     }
   }
 
+
   async function callFunction(funcName, ...args) {
     if (!contract) return;
     try {
       const tx = await contract[funcName](...args);
       await tx.wait();
       console.log("Transação confirmada:", tx);
-      fetchRankings(contract);
+      await fetchRankings(contract);
     } catch (error) {
       console.error("Erro ao chamar função", error);
     }
@@ -102,20 +110,25 @@ export default function App() {
       <h1 className="text-xl font-bold">DApp com MetaMask</h1>
       <p>Conta conectada: {account}</p>
 
-      <label className="mt-5 block text-lg font-bold">Selecione uma :</label>
-      <select 
+      <label className="mt-5 block text-lg font-bold">Selecione uma conta:</label>
+      <br />
+      <select
         onChange={handleNameChange}
         value={selectedName}
         className="bg-blue-500 text-white px-4 py-2 rounded"
       >
-         <option value="">Selecione...</option>
+        <option value="">Selecione...</option>
         {rankings.map(({ name }, index) => (
           <option key={index} value={name}>
             {name}
           </option>
         ))}
       </select>
+      <br />
+
       <label className="mt-5 block text-lg font-bold">Digite o valor (em ETH):</label>
+      <br />
+
       <input
         type="text"
         value={amount}
@@ -123,37 +136,54 @@ export default function App() {
         className="bg-white border-2 border-gray-300 rounded px-4 py-2 mt-2"
         placeholder="Digite o valor..."
       />
+      <br />
+
       <button
         onClick={() => {
-          console.log(selectedName,amount)
-          callFunction("issueToken",selectedName,amount)}
+          console.log(selectedName, amount)
+          callFunction("issueToken", selectedName, ethers.utils.parseEther(amount))
+        }
         }
         className="bg-blue-500 text-white px-4 py-2 rounded"
       >
         issueToken
       </button>
+      <br />
       <button
-        onClick={() => callFunction("issueToken")}
+        onClick={() => {
+          console.log(selectedName, amount)
+          callFunction("vote", selectedName, ethers.utils.parseEther(amount))
+        }}
         className="bg-blue-500 text-white px-4 py-2 rounded"
       >
         Votar
       </button>
+      <br />
       <button
-        onClick={() => callFunction("vote", selectedName, amount)}
+        onClick={() => {
+          console.log(selectedName, amount)
+          callFunction("voteOn")
+        }}
         className="bg-blue-500 text-white px-4 py-2 rounded"
       >
         Ativar Votação
       </button>
+      <br />
+
       <button
         onClick={() => callFunction("votingOff")}
         className="bg-blue-500 text-white px-4 py-2 rounded"
       >
         Desativar Votação
       </button>
+      <br />
+
       <h2 className="mt-5 text-lg font-bold">Ranking</h2>
       <ul>
         {rankings.map(({ name, amount }, index) => (
-          <li key={index}>{name}: {amount} ETH</li>
+          <li key={index}>
+            {name}: {ethers.utils.formatEther(amount)} ETH
+          </li>
         ))}
       </ul>
     </div>
